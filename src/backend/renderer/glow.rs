@@ -13,8 +13,8 @@ use crate::{
         allocator::{dmabuf::Dmabuf, Format},
         egl::EGLContext,
         renderer::{
-            gles2::*, Bind, ExportDma, ExportMem, ImportDma, ImportMem, Offscreen, Renderer, TextureFilter,
-            Unbind,
+            gles2::*, Bind, Blit, ExportDma, ExportMem, ImportDma, ImportMem, Offscreen, Renderer,
+            TextureFilter, Unbind,
         },
     },
     utils::{Buffer as BufferCoord, Physical, Rectangle, Size, Transform},
@@ -340,6 +340,22 @@ where
 {
     fn create_buffer(&mut self, size: Size<i32, BufferCoord>) -> Result<T, Gles2Error> {
         Offscreen::<T>::create_buffer(&mut *self.gl, size)
+    }
+}
+
+impl<B1, B2> Blit<B1, B2> for GlowRenderer
+where
+    Gles2Renderer: Blit<B1, B2>,
+{
+    fn blit(
+        &mut self,
+        from: B1,
+        to: B2,
+        src: Rectangle<i32, Physical>,
+        dst: Rectangle<i32, Physical>,
+        filter: TextureFilter,
+    ) -> Result<(), Gles2Error> {
+        self.gl.blit(from, to, src, dst, filter)
     }
 }
 
