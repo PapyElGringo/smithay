@@ -1707,7 +1707,7 @@ where
         }
 
         let errno = unsafe {
-            let _ = self.gl.GetError(); // clear flag before
+            while self.gl.GetError() != ffi::NO_ERROR {} // clear flag before
             self.gl.BlitFramebuffer(
                 src.loc.x,
                 src.loc.y,
