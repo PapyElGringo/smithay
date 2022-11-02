@@ -1646,18 +1646,56 @@ where
         src: Rectangle<i32, Physical>,
         dst: Rectangle<i32, Physical>,
         filter: TextureFilter,
-    ) -> Result<(), <Self as Renderer>::Error> {
-        // glBlitFramebuffer is sadly only available for GLES 3.0 and higher
-        if self.gl_version < version::GLES_3_0 {
-            return Err(Gles2Error::GLVersionNotSupported(version::GLES_3_0));
-        }
-
+    ) -> Result<(), Gles2Error> {
         let src_target = self.target.take().ok_or(Gles2Error::BlitError)?;
         self.bind(to)?;
         let dst_target = self.target.take().unwrap();
         self.unbind()?;
 
-        match (&src_target, &dst_target) {
+        let result = self.blit(&src_target, &dst_target, src, dst, filter);
+
+        self.target = Some(src_target);
+        self.make_current()?;
+
+        result
+    }
+
+    fn blit_from(
+        &mut self,
+        from: Target,
+        src: Rectangle<i32, Physical>,
+        dst: Rectangle<i32, Physical>,
+        filter: TextureFilter,
+    ) -> Result<(), Gles2Error> {
+        let dst_target = self.target.take().ok_or(Gles2Error::BlitError)?;
+        self.bind(from)?;
+        let src_target = self.target.take().unwrap();
+        self.unbind()?;
+
+        let result = self.blit(&src_target, &dst_target, src, dst, filter);
+
+        self.target = Some(dst_target);
+        self.make_current()?;
+
+        result
+    }
+}
+
+impl Gles2Renderer {
+    fn blit(
+        &mut self,
+        src_target: &Gles2Target,
+        dst_target: &Gles2Target,
+        src: Rectangle<i32, Physical>,
+        dst: Rectangle<i32, Physical>,
+        filter: TextureFilter,
+    ) -> Result<(), Gles2Error> {
+        // glBlitFramebuffer is sadly only available for GLES 3.0 and higher
+        if self.gl_version < version::GLES_3_0 {
+            return Err(Gles2Error::GLVersionNotSupported(version::GLES_3_0));
+        }
+
+        match (src_target, dst_target) {
             (&Gles2Target::Surface(ref src), &Gles2Target::Surface(ref dst)) => unsafe {
                 self.egl
                     .make_current_with_draw_and_read_surface(Some(&**dst), Some(&**src))?;
@@ -1675,7 +1713,7 @@ where
             },
         }
 
-        match &src_target {
+        match src_target {
             Gles2Target::Image { ref buf, .. } => unsafe {
                 self.gl.BindFramebuffer(ffi::READ_FRAMEBUFFER, buf.fbo)
             },
@@ -1685,9 +1723,9 @@ where
             Gles2Target::Renderbuffer { ref fbo, .. } => unsafe {
                 self.gl.BindFramebuffer(ffi::READ_FRAMEBUFFER, *fbo)
             },
-            _ => {}
+            _ => {} // Note: The only target missing is `Surface` and handled above
         }
-        match &dst_target {
+        match dst_target {
             Gles2Target::Image { ref buf, .. } => unsafe {
                 self.gl.BindFramebuffer(ffi::DRAW_FRAMEBUFFER, buf.fbo)
             },
@@ -1697,7 +1735,7 @@ where
             Gles2Target::Renderbuffer { ref fbo, .. } => unsafe {
                 self.gl.BindFramebuffer(ffi::DRAW_FRAMEBUFFER, *fbo)
             },
-            _ => {}
+            _ => {} // Note: The only target missing is `Surface` and handled above
         }
 
         let status = unsafe { self.gl.CheckFramebufferStatus(ffi::FRAMEBUFFER) };
@@ -1725,10 +1763,6 @@ where
             );
             self.gl.GetError()
         };
-
-        self.unbind()?;
-        self.target = Some(src_target);
-        self.make_current()?;
 
         if errno == ffi::INVALID_OPERATION {
             Err(Gles2Error::BlitError)
