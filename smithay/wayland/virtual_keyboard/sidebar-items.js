@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["VirtualKeyboardManagerGlobalData","Data associated with a VirtualKeyboardManager global."],["VirtualKeyboardManagerState","State of wp misc virtual keyboard protocol"],["VirtualKeyboardUserData","User data of ZwpVirtualKeyboardV1 object"]]};

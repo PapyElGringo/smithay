@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["keyboard","Keyboard-related types for smithay’s input abstraction"],["pointer","Pointer-related types for smithay’s input abstraction"]],"struct":[["Seat","A Seat handle"],["SeatState","Delegate type for all [Seat] globals."]],"trait":[["SeatHandler","Handler trait for Seats"]]};

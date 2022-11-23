@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["ensure_viewport_valid","Ensures that the viewport, if any, is valid accordingly to the protocol specification."]],"struct":[["ViewportCachedState","Represents the double-buffered viewport state of a `WlSurface`"],["ViewportState","State of a single viewport attached to a surface"],["ViewporterState","State of the wp_viewporter Global"]]};

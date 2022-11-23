@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Handle","A handle to a framebuffer"],["Info","Information about a framebuffer"],["PlanarInfo","Information about a framebuffer (with modifiers)"]]};

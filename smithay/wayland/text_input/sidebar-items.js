@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["TextInputHandle","Handle to text input instances"],["TextInputManagerState","State of wp text input protocol"],["TextInputUserData","User data of ZwpTextInputV3 object"]]};

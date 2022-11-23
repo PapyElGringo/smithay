@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["DumbBuffer","Slow, but generic [`buffer::Buffer`] implementation"],["DumbMapping","Mapping of a [`DumbBuffer`]"]]};

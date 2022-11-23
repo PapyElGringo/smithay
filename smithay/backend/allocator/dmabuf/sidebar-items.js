@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["MAX_PLANES","Maximum amount of planes this implementation supports"]],"struct":[["Dmabuf","Strong reference to a dmabuf handle"],["DmabufBuilder","Builder for Dmabufs"],["DmabufFlags","Possible flags for a DMA buffer"],["WeakDmabuf","Weak reference to a dmabuf handle"]],"trait":[["AsDmabuf","Buffer that can be exported as Dmabufs"]]};

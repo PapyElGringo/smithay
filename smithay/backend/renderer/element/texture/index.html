@@ -1,0 +1,154 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Element to render a texture"><meta name="keywords" content="rust, rustlang, rust-lang, texture"><title>smithay::backend::renderer::element::texture - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-36393ba397788895.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../smithay/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></div></a><h2></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../smithay/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></div></a><h2 class="location"><a href="#">Module texture</a></h2><div class="sidebar-elems"><section><ul class="block"><li><a href="#structs">Structs</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1 class="fqn">Module <a href="../../../../index.html">smithay</a>::<wbr><a href="../../../index.html">backend</a>::<wbr><a href="../../index.html">renderer</a>::<wbr><a href="../index.html">element</a>::<wbr><a class="mod" href="#">texture</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../../../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../../../../../src/smithay/backend/renderer/element/texture.rs.html#1-837">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Element to render a texture</p>
+<h2 id="why-use-this-implementation"><a href="#why-use-this-implementation">Why use this implementation</a></h2>
+<p>This module provides the following elements</p>
+<h3 id="static-texture"><a href="#static-texture">Static texture</a></h3>
+<p><a href="struct.TextureBuffer.html" title="TextureBuffer"><code>TextureBuffer</code></a> represents a static texture which is expected to not change.
+It is possible to either use a <a href="struct.TextureBuffer.html#method.from_texture"><code>pre-existing texture</code></a> or to create the texture
+from <a href="struct.TextureBuffer.html#method.from_memory"><code>RGBA memory</code></a>.
+The <a href="struct.TextureBuffer.html" title="TextureBuffer"><code>TextureBuffer</code></a> can be used in the smithay pipeline by using <a href="struct.TextureRenderElement.html#method.from_texture_buffer" title="TextureRenderElement::from_texture_buffer"><code>TextureRenderElement::from_texture_buffer</code></a>.</p>
+<h3 id="hardware-accelerated-rendering"><a href="#hardware-accelerated-rendering">Hardware accelerated rendering</a></h3>
+<p><a href="struct.TextureRenderBuffer.html" title="TextureRenderBuffer"><code>TextureRenderBuffer</code></a> provides a solution for hardware accelerated rending with
+proper damage tracking. It provides a <a href="struct.RenderContext.html" title="RenderContext"><code>RenderContext</code></a> for rendering to the stored
+texture. The collected damage from <a href="struct.RenderContext.html#method.draw" title="RenderContext::draw"><code>RenderContext::draw</code></a> is used to report the
+damaged regions in the <a href="struct.TextureRenderElement.html" title="TextureRenderElement"><code>TextureRenderElement</code></a>. For rendering a <a href="struct.TextureRenderBuffer.html" title="TextureRenderBuffer"><code>TextureRenderBuffer</code></a> you
+can create a render element with <a href="struct.TextureRenderElement.html#method.from_texture_render_buffer" title="TextureRenderElement::from_texture_render_buffer"><code>TextureRenderElement::from_texture_render_buffer</code></a>.</p>
+<h2 id="why-not-to-use-this-implementation"><a href="#why-not-to-use-this-implementation">Why <strong>not</strong> to use this implementation</a></h2>
+<p>For software rendering you may take a look at <a href="../memory/struct.MemoryRenderBuffer.html"><code>MemoryRenderBuffer</code></a>
+which provides proper damage tracking and is agnostic over the <a href="../../trait.Renderer.html"><code>Renderer</code></a></p>
+<h2 id="how-to-use-it"><a href="#how-to-use-it">How to use it</a></h2>
+<p>Both, <a href="struct.TextureBuffer.html" title="TextureBuffer"><code>TextureBuffer</code></a> and <a href="struct.TextureRenderBuffer.html" title="TextureRenderBuffer"><code>TextureRenderBuffer</code></a> represent a buffer of your texture data.
+To render the buffer you have to create a <a href="struct.TextureRenderElement.html" title="TextureRenderElement"><code>TextureRenderElement</code></a> in your render loop as
+shown in the examples.</p>
+<p>To integrate custom texture based buffers the <a href="struct.TextureRenderElement.html" title="TextureRenderElement"><code>TextureRenderElement</code></a> provides two functions
+to create the render element. <a href="struct.TextureRenderElement.html#method.from_static_texture"><code>from_static_texture</code></a> can be used to
+create a render element from a static texture without damage tracking.
+<a href="struct.TextureRenderElement.html#method.from_texture_with_damage"><code>from_texture_with_damage</code></a> can be used to create
+a render element from an existing texture with custom damage tracking.
+In both cases you have to make sure to provide a stable <a href="../struct.Id.html" title="Id"><code>Id</code></a> or otherwise damage tracking will not work.</p>
+<h3 id="texturebuffer"><a href="#texturebuffer"><code>TextureBuffer</code></a></h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>smithay::{
+    backend::renderer::{
+        damage::DamageTrackedRenderer,
+        element::texture::{TextureBuffer, TextureRenderElement},
+    },
+    utils::{Point, Transform},
+};
+
+<span class="kw">const </span>WIDTH: i32 = <span class="number">10</span>;
+<span class="kw">const </span>HEIGHT: i32 = <span class="number">10</span>;
+
+
+<span class="kw">let </span>memory = <span class="macro">vec!</span>[<span class="number">0</span>; (WIDTH * <span class="number">4 </span>* HEIGHT) <span class="kw">as </span>usize];
+
+<span class="comment">// Create the texture buffer from a chunk of memory
+</span><span class="kw">let </span>texture_buffer = TextureBuffer::from_memory(
+    <span class="kw-2">&amp;mut </span>renderer,
+    <span class="kw-2">&amp;</span>memory,
+    (WIDTH, HEIGHT),
+    <span class="bool-val">false</span>,
+    <span class="number">1</span>,
+    Transform::Normal,
+    <span class="prelude-val">None</span>,
+)
+.expect(<span class="string">&quot;failed to import mem&quot;</span>);
+
+<span class="kw">let </span><span class="kw-2">mut </span>damage_tracked_renderer = DamageTrackedRenderer::new((<span class="number">800</span>, <span class="number">600</span>), <span class="number">1.0</span>, Transform::Normal);
+
+<span class="kw">loop </span>{
+    <span class="comment">// Create a render element from the buffer
+    </span><span class="kw">let </span>location = Point::from((<span class="number">100.0</span>, <span class="number">100.0</span>));
+    <span class="kw">let </span>render_element =
+        TextureRenderElement::from_texture_buffer(location, <span class="kw-2">&amp;</span>texture_buffer, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+
+    <span class="comment">// Render the element(s)
+    </span>damage_tracked_renderer
+        .render_output(<span class="kw-2">&amp;mut </span>renderer, <span class="number">0</span>, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>render_element], [<span class="number">0.8</span>, <span class="number">0.8</span>, <span class="number">0.9</span>, <span class="number">1.0</span>], log.clone())
+        .expect(<span class="string">&quot;failed to render output&quot;</span>);
+}</code></pre></div>
+<h3 id="texturerenderbuffer"><a href="#texturerenderbuffer"><code>TextureRenderBuffer</code></a></h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>std::time::{Duration, Instant};
+
+<span class="kw">use </span>smithay::{
+    backend::renderer::{
+        damage::DamageTrackedRenderer,
+        element::texture::{TextureRenderBuffer, TextureRenderElement},
+    },
+    utils::{Point, Rectangle, Size, Transform},
+};
+
+<span class="kw">const </span>WIDTH: i32 = <span class="number">10</span>;
+<span class="kw">const </span>HEIGHT: i32 = <span class="number">10</span>;
+
+
+<span class="kw">let </span>memory = <span class="macro">vec!</span>[<span class="number">0</span>; (WIDTH * <span class="number">4 </span>* HEIGHT) <span class="kw">as </span>usize];
+
+<span class="comment">// Create the texture buffer from a chunk of memory
+</span><span class="kw">let </span><span class="kw-2">mut </span>texture_render_buffer = TextureRenderBuffer::from_memory(
+    <span class="kw-2">&amp;mut </span>renderer,
+    <span class="kw-2">&amp;</span>memory,
+    (WIDTH, HEIGHT),
+    <span class="bool-val">false</span>,
+    <span class="number">1</span>,
+    Transform::Normal,
+    <span class="prelude-val">None</span>,
+)
+.expect(<span class="string">&quot;failed to import mem&quot;</span>);
+
+<span class="comment">// Create the rendering context
+</span><span class="kw">let </span><span class="kw-2">mut </span>render_context = texture_render_buffer.render();
+
+<span class="comment">// Draw to the texture
+</span>render_context.draw(|_texture| {
+    <span class="comment">// Your draw code here...
+
+    // Return the damage areas
+    </span><span class="prelude-ty">Result</span>::&lt;<span class="kw">_</span>, ()&gt;::Ok(<span class="macro">vec!</span>[Rectangle::from_loc_and_size(
+        Point::default(),
+        Size::from((WIDTH, HEIGHT)),
+    )])
+});
+
+<span class="comment">// Optionally update the opaque regions
+</span>render_context.update_opaque_regions(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[Rectangle::from_loc_and_size(
+    Point::default(),
+    Size::from((WIDTH, HEIGHT)),
+)]));
+
+<span class="comment">// We explicitly drop the context here to make the borrow checker happy
+</span>std::mem::drop(render_context);
+
+<span class="kw">let </span><span class="kw-2">mut </span>damage_tracked_renderer = DamageTrackedRenderer::new((<span class="number">800</span>, <span class="number">600</span>), <span class="number">1.0</span>, Transform::Normal);
+
+<span class="kw">let </span><span class="kw-2">mut </span>last_update = Instant::now();
+
+<span class="kw">loop </span>{
+    <span class="kw">let </span>now = Instant::now();
+    <span class="kw">if </span>now.duration_since(last_update) &gt;= Duration::from_secs(<span class="number">3</span>) {
+        <span class="kw">let </span><span class="kw-2">mut </span>render_context = texture_render_buffer.render();
+
+        render_context.draw(|_buffer| {
+            <span class="comment">// Update the changed parts of the buffer
+
+            // Return the updated parts
+            </span><span class="prelude-ty">Result</span>::&lt;<span class="kw">_</span>, ()&gt;::Ok(<span class="macro">vec!</span>[Rectangle::from_loc_and_size(Point::default(), (WIDTH, HEIGHT))])
+        });
+
+        last_update = now;
+    }
+
+    <span class="comment">// Create a render element from the buffer
+    </span><span class="kw">let </span>location = Point::from((<span class="number">100.0</span>, <span class="number">100.0</span>));
+    <span class="kw">let </span>render_element = TextureRenderElement::from_texture_render_buffer(
+        location,
+        <span class="kw-2">&amp;</span>texture_render_buffer,
+        <span class="prelude-val">None</span>,
+        <span class="prelude-val">None</span>,
+        <span class="prelude-val">None</span>,
+    );
+
+    <span class="comment">// Render the element(s)
+    </span>damage_tracked_renderer
+        .render_output(<span class="kw-2">&amp;mut </span>renderer, <span class="number">0</span>, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>render_element], [<span class="number">0.8</span>, <span class="number">0.8</span>, <span class="number">0.9</span>, <span class="number">1.0</span>], log.clone())
+        .expect(<span class="string">&quot;failed to render output&quot;</span>);
+}</code></pre></div>
+</div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2><div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.RenderContext.html" title="smithay::backend::renderer::element::texture::RenderContext struct">RenderContext</a></div><div class="item-right docblock-short">A render context for <a href="struct.TextureRenderBuffer.html" title="TextureRenderBuffer"><code>TextureRenderBuffer</code></a></div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.TextureBuffer.html" title="smithay::backend::renderer::element::texture::TextureBuffer struct">TextureBuffer</a></div><div class="item-right docblock-short">A single texture buffer</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.TextureRenderBuffer.html" title="smithay::backend::renderer::element::texture::TextureRenderBuffer struct">TextureRenderBuffer</a></div><div class="item-right docblock-short">A texture backed render buffer</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.TextureRenderElement.html" title="smithay::backend::renderer::element::texture::TextureRenderElement struct">TextureRenderElement</a></div><div class="item-right docblock-short">A render element for a <a href="struct.TextureRenderBuffer.html" title="TextureRenderBuffer"><code>TextureRenderBuffer</code></a></div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="smithay" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (ff8c8dfbe 2022-11-22)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

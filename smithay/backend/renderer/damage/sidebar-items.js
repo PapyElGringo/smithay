@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["DamageTrackedRendererError","Errors thrown by [`DamageTrackedRenderer::render_output`]"],["DamageTrackedRendererMode","Mode for the [`DamageTrackedRenderer`]"]],"struct":[["DamageTrackedRenderer","Damage tracked renderer for a single output"],["OutputNoMode","Output has no active mode"]]};

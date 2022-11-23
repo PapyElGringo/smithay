@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["get_vk_format","Converts a FourCC format code to a Vulkan format code."],["known_formats","Returns all the known format conversions."]]};

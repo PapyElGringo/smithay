@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["KdeDecorationState","KDE server decoration state."]],"trait":[["KdeDecorationHandler","KDE server decoration handler."]]};

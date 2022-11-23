@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Scale","Describes the scale advertised to clients."],["Subpixel","Subpixel geometry information"]],"struct":[["Mode","An output mode"],["Output","An abstract output."],["PhysicalProperties","The physical properties of an output"],["WeakOutput","Weak variant of an [`Output`]"]]};

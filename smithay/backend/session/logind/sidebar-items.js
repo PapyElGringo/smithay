@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Error","Errors related to logind sessions"]],"struct":[["LogindSession","[`Session`] via the logind dbus interface"],["LogindSessionNotifier","Notifier for the logind dbus interface"]]};

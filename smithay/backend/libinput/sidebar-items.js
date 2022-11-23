@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["LibinputInputBackend","Libinput based [`InputBackend`]."],["LibinputSessionInterface","Wrapper for types implementing the [`Session`] trait to provide a [`libinput::LibinputInterface`] implementation."]]};

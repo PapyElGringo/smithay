@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["DeviceEvent","A device related `Event`"]],"struct":[["DeviceAddedEvent","Signals that a device has been added to the context."],["DeviceRemovedEvent","Signals that a device has been removed."]],"trait":[["DeviceEventTrait","Common functions all Device-Events implement."]]};

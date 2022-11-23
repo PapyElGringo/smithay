@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["TimeoutAction","Action to reschedule a timeout if necessary"]],"struct":[["TimeoutFuture","A future that resolves once a certain timeout is expired"],["Timer","A timer event source"]]};

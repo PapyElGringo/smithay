@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["session_lock","This protocol allows for a privileged Wayland client to lock the session and display arbitrary graphics while the session is locked."]]};

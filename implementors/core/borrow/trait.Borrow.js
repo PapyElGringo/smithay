@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"smithay":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/borrow/trait.Borrow.html\" title=\"trait core::borrow::Borrow\">Borrow</a>&lt;<a class=\"struct\" href=\"smithay/backend/renderer/gles2/struct.Gles2Renderer.html\" title=\"struct smithay::backend::renderer::gles2::Gles2Renderer\">Gles2Renderer</a>&gt; for <a class=\"struct\" href=\"smithay/backend/renderer/glow/struct.GlowRenderer.html\" title=\"struct smithay::backend::renderer::glow::GlowRenderer\">GlowRenderer</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

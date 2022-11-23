@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["GlowFrame","`Frame` implementation of a [`GlowRenderer`]."],["GlowRenderer","A renderer utilizing OpenGL ES 2 and [`glow`] on top for easier custom rendering."]]};

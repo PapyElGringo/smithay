@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["REQ_CREATE_TEXT_INPUT_OPCODE","The wire opcode for this request"],["REQ_CREATE_TEXT_INPUT_SINCE","The minimal object version supporting this request"]],"enum":[["Event",""],["Request",""]],"struct":[["ZwpTextInputManagerV1","text input manager"]]};

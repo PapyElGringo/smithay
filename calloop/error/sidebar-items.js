@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Error","The primary error type used by Calloop covering internal errors and I/O errors that arise during loop operations such as source registration or event dispatching."]],"struct":[["InsertError","An error generated when trying to insert an event source"]],"type":[["Result","[`Result`] alias using Calloop’s error type."]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["render_elements_from_surface_tree","Retrieve the [`WaylandSurfaceRenderElement`]s for a surface tree"]],"struct":[["WaylandSurfaceRenderElement","A single surface render element"]]};

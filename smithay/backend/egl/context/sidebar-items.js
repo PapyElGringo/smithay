@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["GlProfile","Describes the requested OpenGL context profiles."]],"struct":[["EGLContext","EGL context for rendering"],["GlAttributes","Attributes to use when creating an OpenGL context."],["PixelFormatRequirements","Describes how the backend should choose a pixel format."]]};

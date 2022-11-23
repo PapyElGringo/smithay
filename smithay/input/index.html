@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Input abstractions"><meta name="keywords" content="rust, rustlang, rust-lang, input"><title>smithay::input - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-36393ba397788895.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../smithay/index.html"><div class="logo-container"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></div></a><h2></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../smithay/index.html"><div class="logo-container"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></div></a><h2 class="location"><a href="#">Module input</a></h2><div class="sidebar-elems"><section><ul class="block"><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1 class="fqn">Module <a href="../index.html">smithay</a>::<wbr><a class="mod" href="#">input</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../../src/smithay/input/mod.rs.html#1-508">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Input abstractions</p>
+<p>This module provides some types loosely resembling instances of wayland seats, pointers and keyboards.
+It is however not directly tied to wayland and can be used to multiplex various input operations
+between different handlers.</p>
+<p>If the [<code>wayland_frontend</code>]-feature is enabled the <code>smithay::wayland::seat</code>-module provides additional
+functionality for the provided types of this module to map them to advertised wayland globals and objects.</p>
+<h3 id="how-to-use-it"><a href="#how-to-use-it">How to use it</a></h3>
+<p>To start using this module you need to create a <a href="struct.SeatState.html" title="SeatState"><code>SeatState</code></a> and use that to create <a href="struct.Seat.html" title="Seat"><code>Seat</code></a>s.
+Additionally you need to implement the <a href="trait.SeatHandler.html" title="SeatHandler"><code>SeatHandler</code></a> trait.</p>
+<h4 id="initialization"><a href="#initialization">Initialization</a></h4>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>smithay::input::{Seat, SeatState, SeatHandler, pointer::CursorImageStatus};
+
+<span class="kw">struct </span>State {
+    seat_state: SeatState&lt;<span class="self">Self</span>&gt;,
+    <span class="comment">// ...
+</span>};
+
+<span class="kw">let </span><span class="kw-2">mut </span>seat_state = SeatState::&lt;State&gt;::new();
+
+<span class="comment">// create the seat
+</span><span class="kw">let </span>seat = seat_state.new_seat(
+    <span class="string">&quot;seat-0&quot;</span>,  <span class="comment">// the name of the seat, will be advertized to clients
+    </span><span class="prelude-val">None       </span><span class="comment">// insert a logger here
+</span>);
+
+
+<span class="comment">// implement the required traits
+</span><span class="kw">impl </span>SeatHandler <span class="kw">for </span>State {
+    <span class="kw">type </span>KeyboardFocus = Target;
+    <span class="kw">type </span>PointerFocus = Target;
+
+    <span class="kw">fn </span>seat_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>SeatState&lt;<span class="self">Self</span>&gt; {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.seat_state
+    }
+
+    <span class="kw">fn </span>focus_changed(<span class="kw-2">&amp;mut </span><span class="self">self</span>, seat: <span class="kw-2">&amp;</span>Seat&lt;<span class="self">Self</span>&gt;, focused: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Target&gt;) {
+        <span class="comment">// handle focus changes, if you need to ...
+    </span>}
+    <span class="kw">fn </span>cursor_image(<span class="kw-2">&amp;mut </span><span class="self">self</span>, seat: <span class="kw-2">&amp;</span>Seat&lt;<span class="self">Self</span>&gt;, image: CursorImageStatus) {
+        <span class="comment">// handle new images for the cursor ...
+    </span>}
+}</code></pre></div>
+<h4 id="run-usage"><a href="#run-usage">Run usage</a></h4>
+<p>Once the seat is initialized, you can add capabilities to it.</p>
+<p>Currently, pointer and keyboard capabilities are supported by this module.
+[<code>smithay::wayland::seat</code>] also provides an abstraction to send touch-events to client,
+further helpers are not provided at this point.
+[<code>smithay::wayland::tablet_manager</code>] also provides client interaction for drawing tablets.</p>
+<p>You can add these capabilities via methods of the <a href="struct.Seat.html" title="Seat"><code>Seat</code></a> struct:
+<a href="struct.Seat.html#method.add_keyboard" title="Seat::add_keyboard"><code>Seat::add_keyboard</code></a> and <a href="struct.Seat.html#method.add_pointer" title="Seat::add_pointer"><code>Seat::add_pointer</code></a>.
+These methods return handles that can be cloned and sent across thread, so you can keep one around
+in your event-handling code to forward inputs to your clients.</p>
+</div></details><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2><div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="mod" href="keyboard/index.html" title="smithay::input::keyboard mod">keyboard</a></div><div class="item-right docblock-short">Keyboard-related types for smithay’s input abstraction</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="pointer/index.html" title="smithay::input::pointer mod">pointer</a></div><div class="item-right docblock-short">Pointer-related types for smithay’s input abstraction</div></div></div><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2><div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Seat.html" title="smithay::input::Seat struct">Seat</a></div><div class="item-right docblock-short">A Seat handle</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.SeatState.html" title="smithay::input::SeatState struct">SeatState</a></div><div class="item-right docblock-short">Delegate type for all <a href="struct.Seat.html" title="Seat">Seat</a> globals.</div></div></div><h2 id="traits" class="small-section-header"><a href="#traits">Traits</a></h2><div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.SeatHandler.html" title="smithay::input::SeatHandler trait">SeatHandler</a></div><div class="item-right docblock-short">Handler trait for Seats</div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="smithay" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (ff8c8dfbe 2022-11-22)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

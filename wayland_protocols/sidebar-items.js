@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["ext","Miscellaneous protocols"],["wp","Generic wayland protocols"],["xdg","Protocols related to window management"]]};

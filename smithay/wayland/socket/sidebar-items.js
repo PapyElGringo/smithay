@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["ListeningSocketSource","A Wayland listening socket event source."]]};

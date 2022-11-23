@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["make_ping","Create a new ping event source"]],"struct":[["PingError","An error arising from processing events for a ping."]],"type":[["Ping","The ping event source"],["PingSource","The Ping handle"]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Error","Errors raised by the [`EglGlesBackend`]"]],"struct":[["EglGlesBackend","A [`GraphicsApi`] utilizing EGL for device enumeration and OpenGL ES for rendering."],["EglGlesDevice","[`ApiDevice`] of the [`EglGlesBackend`]"]]};

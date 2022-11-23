@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["PresentationFeedbackCachedState","State of a single presentation feedback requested for a surface"],["PresentationFeedbackCallback","Holds a single presentation feedback"],["PresentationFeedbackState","State for a single presentation feedback callback"],["PresentationState","State of the wp_presentation global"]]};

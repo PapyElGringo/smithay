@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["decoration","KDE Window decoration manager"]]};
