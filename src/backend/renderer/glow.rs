@@ -32,7 +32,7 @@ use std::{
     sync::Arc,
 };
 
-use super::{element::RenderElement, Frame};
+use super::{element::RenderElement, ContextId, Frame};
 
 #[derive(Debug)]
 /// A renderer utilizing OpenGL ES 2 and [`glow`] on top for easier custom rendering.
@@ -202,17 +202,17 @@ impl<'frame, 'buffer> BorrowMut<GlesFrame<'frame, 'buffer>> for GlowFrame<'frame
 impl RendererSuper for GlowRenderer {
     type Error = GlesError;
     type TextureId = GlesTexture;
+    type Framebuffer<'buffer> = GlesTarget<'buffer>;
     type Frame<'frame, 'buffer>
         = GlowFrame<'frame, 'buffer>
     where
         'buffer: 'frame,
         Self: 'frame;
-    type Framebuffer<'buffer> = GlesTarget<'buffer>;
 }
 
 impl Renderer for GlowRenderer {
-    fn id(&self) -> usize {
-        self.gl.id()
+    fn context_id(&self) -> ContextId<GlesTexture> {
+        self.gl.context_id()
     }
 
     fn downscale_filter(&mut self, filter: TextureFilter) -> Result<(), Self::Error> {
@@ -259,11 +259,11 @@ impl Renderer for GlowRenderer {
 }
 
 impl Frame for GlowFrame<'_, '_> {
-    type TextureId = GlesTexture;
     type Error = GlesError;
+    type TextureId = GlesTexture;
 
-    fn id(&self) -> usize {
-        self.frame.as_ref().unwrap().id()
+    fn context_id(&self) -> ContextId<GlesTexture> {
+        self.frame.as_ref().unwrap().context_id()
     }
 
     #[profiling::function]
@@ -333,13 +333,13 @@ impl Frame for GlowFrame<'_, '_> {
     }
 
     #[profiling::function]
-    fn finish(mut self) -> Result<sync::SyncPoint, Self::Error> {
-        self.finish_internal()
+    fn wait(&mut self, sync: &sync::SyncPoint) -> Result<(), Self::Error> {
+        self.frame.as_mut().unwrap().wait(sync)
     }
 
     #[profiling::function]
-    fn wait(&mut self, sync: &sync::SyncPoint) -> Result<(), Self::Error> {
-        self.frame.as_mut().unwrap().wait(sync)
+    fn finish(mut self) -> Result<sync::SyncPoint, Self::Error> {
+        self.finish_internal()
     }
 }
 

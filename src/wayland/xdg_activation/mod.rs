@@ -58,7 +58,7 @@ use wayland_server::{
     Dispatch, DisplayHandle, GlobalDispatch,
 };
 
-use rand::distributions::{Alphanumeric, DistString};
+use rand::distr::{Alphanumeric, SampleString};
 
 use crate::utils::{user_data::UserDataMap, Serial};
 
@@ -70,7 +70,7 @@ pub struct XdgActivationToken(String);
 
 impl XdgActivationToken {
     fn new() -> Self {
-        Self(Alphanumeric.sample_string(&mut rand::thread_rng(), 32))
+        Self(Alphanumeric.sample_string(&mut rand::rng(), 32))
     }
 
     /// Extracts a string slice containing the entire token.
@@ -125,8 +125,8 @@ pub struct XdgActivationTokenData {
     pub surface: Option<WlSurface>,
     /// Timestamp of the token
     ///
-    /// You can use this do ignore tokens based on time.
-    /// For example you coould ignore all tokens older that 5s.
+    /// You can use this to ignore tokens based on time.
+    /// For example you could ignore all tokens older than 5s.
     pub timestamp: Instant,
     /// Additional user data attached
     pub user_data: Arc<UserDataMap>,
@@ -204,6 +204,11 @@ impl XdgActivationState {
         let data = data.into().unwrap_or_default();
         self.known_tokens.insert(token.clone(), data);
         self.known_tokens.get_key_value(&token).unwrap()
+    }
+
+    /// Iterate over all known tokens and their associated data
+    pub fn tokens(&self) -> impl Iterator<Item = (&XdgActivationToken, &XdgActivationTokenData)> {
+        self.known_tokens.iter()
     }
 
     /// Access the data of a known token

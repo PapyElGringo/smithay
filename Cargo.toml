@@ -1,6 +1,6 @@
 [package]
 name = "smithay"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Victor Berger <victor.berger@m4x.org>", "Drakulix (Victoria Brekenfeld)"]
 license = "MIT"
 description = "Smithay is a library for writing wayland compositors."
@@ -45,11 +45,11 @@ libc = "0.2.103"
 libseat = { version = "0.2.3", optional = true, default-features = false }
 libloading = { version="0.8.0", optional = true }
 rustix = { version = "0.38.18", features = ["event", "fs", "mm", "net", "shm", "time"] }
-rand = "0.8.4"
+rand = "0.9.0"
 scopeguard = { version = "1.1.0", optional = true }
 tracing = "0.1.37"
 tempfile = { version = "3.0", optional = true }
-thiserror = "1.0.25"
+thiserror = "2.0.12"
 udev = { version = "0.9.0", optional = true }
 # Require never `wayland-client`/`wayland-cursor` than winit uses to fix `-Z minimal-versions`
 # due to issue in older version.
@@ -70,6 +70,7 @@ profiling = "1.0.13"
 smallvec = "1.11"
 pixman = { version = "0.2.1", features = ["drm-fourcc", "sync"], optional = true }
 aliasable = { version = "0.1.3", optional = true }
+atomic_float = "1.1.0"
 
 
 [dev-dependencies]
@@ -88,7 +89,7 @@ default = ["backend_drm", "backend_gbm", "backend_libinput", "backend_udev", "ba
 backend_winit = ["winit", "backend_egl", "wayland-client", "wayland-cursor", "wayland-egl", "renderer_gl"]
 backend_x11 = ["x11rb", "x11rb/dri3", "x11rb/xfixes", "x11rb/xinput", "x11rb/present", "x11rb_event_source", "backend_gbm", "backend_drm", "backend_egl"]
 backend_drm = ["drm", "drm-ffi"]
-backend_gbm = ["gbm", "cc", "pkg-config"]
+backend_gbm = ["gbm", "cc", "pkg-config", "backend_drm"]
 backend_gbm_has_fd_for_plane = []
 backend_gbm_has_create_with_modifiers2 = []
 backend_egl = ["gl_generator", "libloading"]
@@ -107,7 +108,7 @@ use_system_lib = ["wayland_frontend", "wayland-backend/server_system", "wayland-
 use_bindgen = ["drm-ffi/use_bindgen", "gbm/use_bindgen", "input/use_bindgen"]
 wayland_frontend = ["wayland-server", "wayland-protocols", "wayland-protocols-wlr", "wayland-protocols-misc", "tempfile"]
 x11rb_event_source = ["x11rb"]
-xwayland = ["encoding_rs", "wayland_frontend", "x11rb/composite", "x11rb/xfixes", "x11rb_event_source", "scopeguard"]
+xwayland = ["encoding_rs", "wayland_frontend", "x11rb/composite", "x11rb/xfixes", "x11rb/randr", "x11rb_event_source", "scopeguard"]
 test_all_features = ["default", "use_system_lib", "renderer_glow", "renderer_test"]
 
 [[example]]

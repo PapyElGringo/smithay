@@ -5,7 +5,9 @@ use core::slice;
 use std::{
     collections::HashMap,
     ffi::{CStr, CString},
-    fmt, mem,
+    fmt,
+    marker::PhantomData,
+    mem,
     os::raw::c_char,
     ptr,
     rc::Rc,
@@ -34,22 +36,24 @@ pub use uniform::*;
 use self::version::GlVersion;
 
 use super::{
-    sync::SyncPoint, Bind, Blit, BlitFrame, Color32F, DebugFlags, ExportMem, Frame, ImportDma, ImportMem,
-    Offscreen, Renderer, RendererSuper, Texture, TextureFilter, TextureMapping,
+    sync::SyncPoint, Bind, Blit, BlitFrame, Color32F, ContextId, DebugFlags, ExportMem, Frame, ImportDma,
+    ImportMem, Offscreen, Renderer, RendererSuper, Texture, TextureFilter, TextureMapping,
 };
-use crate::backend::egl::{
-    ffi::egl::{self as ffi_egl, types::EGLImage},
-    EGLContext, EGLSurface, MakeCurrentError,
-};
-use crate::backend::{
-    allocator::{
-        dmabuf::{Dmabuf, WeakDmabuf},
-        format::{get_bpp, get_opaque, has_alpha, FormatSet},
-        Format, Fourcc,
+use crate::{
+    backend::{
+        allocator::{
+            dmabuf::{Dmabuf, WeakDmabuf},
+            format::{get_bpp, get_opaque, has_alpha, FormatSet},
+            Buffer, Format, Fourcc,
+        },
+        egl::{
+            fence::EGLFence,
+            ffi::egl::{self as ffi_egl, types::EGLImage},
+            EGLContext, EGLSurface, MakeCurrentError,
+        },
     },
-    egl::fence::EGLFence,
+    utils::{Buffer as BufferCoord, Physical, Rectangle, Size, Transform},
 };
-use crate::utils::{Buffer as BufferCoord, Physical, Rectangle, Size, Transform};
 
 #[cfg(all(feature = "wayland_frontend", feature = "use_system_lib"))]
 use super::ImportEgl;
@@ -65,14 +69,6 @@ use wayland_server::protocol::wl_buffer;
 #[allow(clippy::all, missing_docs, missing_debug_implementations)]
 pub mod ffi {
     include!(concat!(env!("OUT_DIR"), "/gl_bindings.rs"));
-}
-
-crate::utils::ids::id_gen!(renderer_id);
-struct RendererId(usize);
-impl Drop for RendererId {
-    fn drop(&mut self) {
-        renderer_id::remove(self.0);
-    }
 }
 
 enum CleanupResource {
@@ -160,6 +156,34 @@ enum GlesTargetInternal<'a> {
         buf: &'a mut GlesRenderbuffer,
         fbo: ffi::types::GLuint,
     },
+}
+
+impl Texture for GlesTarget<'_> {
+    fn height(&self) -> u32 {
+        self.size().h as u32
+    }
+
+    fn width(&self) -> u32 {
+        self.size().w as u32
+    }
+
+    fn size(&self) -> Size<i32, BufferCoord> {
+        match &self.0 {
+            GlesTargetInternal::Image { dmabuf, .. } => dmabuf.size(),
+            GlesTargetInternal::Surface { surface } => surface
+                .get_size()
+                .expect("a bound EGLSurface needs to have a size")
+                .to_logical(1)
+                .to_buffer(1, Transform::Normal),
+            GlesTargetInternal::Texture { texture, .. } => texture.size(),
+            GlesTargetInternal::Renderbuffer { buf, .. } => buf.size(),
+        }
+    }
+
+    fn format(&self) -> Option<Fourcc> {
+        let (gl_format, _) = self.0.format()?;
+        gl_internal_format_to_fourcc(gl_format)
+    }
 }
 
 impl GlesTargetInternal<'_> {
@@ -276,7 +300,7 @@ pub struct GlesRenderer {
 
     // caches
     buffers: Vec<GlesBuffer>,
-    dmabuf_cache: std::collections::HashMap<WeakDmabuf, GlesTexture>,
+    dmabuf_cache: HashMap<WeakDmabuf, GlesTexture>,
     vbos: [ffi::types::GLuint; 2],
     vertices: Vec<f32>,
     non_opaque_damage: Vec<Rectangle<i32, Physical>>,
@@ -287,7 +311,7 @@ pub struct GlesRenderer {
     destruction_callback_sender: Sender<CleanupResource>,
 
     // markers
-    _not_send: *mut (),
+    _not_send: PhantomData<*mut ()>,
 
     // debug
     span: tracing::Span,
@@ -586,7 +610,8 @@ impl GlesRenderer {
 
         context
             .user_data()
-            .insert_if_missing_threadsafe(|| RendererId(renderer_id::next()));
+            .insert_if_missing_threadsafe(ContextId::<GlesTexture>::new);
+
         drop(_guard);
 
         let renderer = GlesRenderer {
@@ -615,7 +640,7 @@ impl GlesRenderer {
             destruction_callback_sender: tx,
 
             debug_flags: DebugFlags::empty(),
-            _not_send: std::ptr::null_mut(),
+            _not_send: PhantomData,
             span,
             gl_debug_span,
         };
@@ -747,7 +772,7 @@ impl ImportMemWl for GlesRenderer {
 
         // why not store a `GlesTexture`? because the user might do so.
         // this is guaranteed a non-public internal type, so we are good.
-        type CacheMap = HashMap<usize, Arc<GlesTextureInternal>>;
+        type CacheMap = HashMap<ContextId<GlesTexture>, Arc<GlesTextureInternal>>;
 
         let mut surface_lock = surface.as_ref().map(|surface_data| {
             surface_data
@@ -793,7 +818,7 @@ impl ImportMemWl for GlesRenderer {
 
             let mut upload_full = false;
 
-            let id = self.id();
+            let id = self.context_id();
             let texture = GlesTexture(
                 surface_lock
                     .as_ref()
@@ -1987,8 +2012,12 @@ impl RendererSuper for GlesRenderer {
 }
 
 impl Renderer for GlesRenderer {
-    fn id(&self) -> usize {
-        self.egl.user_data().get::<RendererId>().unwrap().0
+    fn context_id(&self) -> ContextId<GlesTexture> {
+        self.egl
+            .user_data()
+            .get::<ContextId<GlesTexture>>()
+            .unwrap()
+            .clone()
     }
 
     fn downscale_filter(&mut self, filter: TextureFilter) -> Result<(), Self::Error> {
@@ -2173,11 +2202,11 @@ static OUTPUT_VERTS: [ffi::types::GLfloat; 8] = [
 ];
 
 impl Frame for GlesFrame<'_, '_> {
-    type TextureId = GlesTexture;
     type Error = GlesError;
+    type TextureId = GlesTexture;
 
-    fn id(&self) -> usize {
-        self.renderer.id()
+    fn context_id(&self) -> ContextId<GlesTexture> {
+        self.renderer.context_id()
     }
 
     #[instrument(level = "trace", parent = &self.span, skip(self))]
@@ -2262,13 +2291,13 @@ impl Frame for GlesFrame<'_, '_> {
     }
 
     #[profiling::function]
-    fn finish(mut self) -> Result<SyncPoint, Self::Error> {
-        self.finish_internal()
+    fn wait(&mut self, sync: &SyncPoint) -> Result<(), Self::Error> {
+        self.renderer.wait(sync)
     }
 
     #[profiling::function]
-    fn wait(&mut self, sync: &SyncPoint) -> Result<(), Self::Error> {
-        self.renderer.wait(sync)
+    fn finish(mut self) -> Result<SyncPoint, Self::Error> {
+        self.finish_internal()
     }
 }
 

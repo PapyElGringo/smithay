@@ -66,6 +66,15 @@ pub enum Error {
         /// CRTC
         crtc: crtc::Handle,
     },
+    /// Unknown connector handle
+    #[error("The connector ({0:?}) is unknown")]
+    UnknownConnector(connector::Handle),
+    /// Unknown crtc handle
+    #[error("The crtc ({0:?}) is unknown")]
+    UnknownCrtc(crtc::Handle),
+    /// Unknown crtc handle
+    #[error("The plane ({0:?}) is unknown")]
+    UnknownPlane(plane::Handle),
     /// The DrmDevice is missing a required property
     #[error("The DrmDevice is missing a required property '{name}' for handle ({handle:?})")]
     UnknownProperty {
@@ -82,6 +91,8 @@ pub enum Error {
 impl From<Error> for SwapBuffersError {
     #[inline]
     fn from(err: Error) -> SwapBuffersError {
+        // FIXME: replace the special handling for EBUSY with ErrorKind::ResourceBusy once
+        // we reach MSRV >= 1.83
         match err {
             x @ Error::DeviceInactive => SwapBuffersError::TemporaryFailure(Box::new(x)),
             Error::Access(AccessError {
@@ -89,7 +100,7 @@ impl From<Error> for SwapBuffersError {
             }) if matches!(
                 source.kind(),
                 ErrorKind::PermissionDenied | ErrorKind::WouldBlock | ErrorKind::Interrupted
-            ) =>
+            ) || rustix::io::Errno::from_io_error(&source) == Some(rustix::io::Errno::BUSY) =>
             {
                 SwapBuffersError::TemporaryFailure(Box::new(Error::Access(AccessError {
                     errmsg,

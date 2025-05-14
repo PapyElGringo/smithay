@@ -1,6 +1,4 @@
 #![allow(missing_docs)]
-#[cfg(feature = "wayland_frontend")]
-use std::cell::Cell;
 
 #[cfg(all(
     feature = "wayland_frontend",
@@ -26,7 +24,14 @@ use crate::{
     utils::{Buffer, Physical, Rectangle, Size, Transform},
 };
 
-use super::Color32F;
+#[cfg(feature = "wayland_frontend")]
+use std::cell::Cell;
+use std::sync::LazyLock;
+
+use super::{Color32F, ContextId};
+
+/// All [`DummyRenderer`] instances share the same static [`ContextId`].
+static CONTEXT_ID: LazyLock<ContextId<DummyTexture>> = LazyLock::new(ContextId::new);
 
 #[derive(Debug, Default)]
 pub struct DummyRenderer;
@@ -53,17 +58,31 @@ impl From<DummyError> for SwapBuffersError {
 impl RendererSuper for DummyRenderer {
     type Error = DummyError;
     type TextureId = DummyTexture;
+    type Framebuffer<'buffer> = DummyFramebuffer;
     type Frame<'frame, 'buffer>
         = DummyFrame
     where
         'buffer: 'frame,
         Self: 'frame;
-    type Framebuffer<'buffer> = DummyFramebuffer;
 }
 
 impl Renderer for DummyRenderer {
-    fn id(&self) -> usize {
-        0
+    fn context_id(&self) -> ContextId<DummyTexture> {
+        CONTEXT_ID.clone()
+    }
+
+    fn downscale_filter(&mut self, _filter: TextureFilter) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn upscale_filter(&mut self, _filter: TextureFilter) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn set_debug_flags(&mut self, _flags: DebugFlags) {}
+
+    fn debug_flags(&self) -> DebugFlags {
+        DebugFlags::empty()
     }
 
     fn render<'frame, 'buffer>(
@@ -75,21 +94,7 @@ impl Renderer for DummyRenderer {
     where
         'buffer: 'frame,
     {
-        Ok(DummyFrame {})
-    }
-
-    fn upscale_filter(&mut self, _filter: TextureFilter) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    fn downscale_filter(&mut self, _filter: TextureFilter) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    fn set_debug_flags(&mut self, _flags: DebugFlags) {}
-
-    fn debug_flags(&self) -> DebugFlags {
-        DebugFlags::empty()
+        Ok(DummyFrame)
     }
 
     fn wait(&mut self, sync: &SyncPoint) -> Result<(), Self::Error> {
@@ -209,15 +214,29 @@ impl ImportDmaWl for DummyRenderer {}
 #[derive(Debug)]
 pub struct DummyFramebuffer;
 
+impl Texture for DummyFramebuffer {
+    fn width(&self) -> u32 {
+        0
+    }
+
+    fn height(&self) -> u32 {
+        0
+    }
+
+    fn format(&self) -> Option<Fourcc> {
+        None
+    }
+}
+
 #[derive(Debug)]
-pub struct DummyFrame {}
+pub struct DummyFrame;
 
 impl Frame for DummyFrame {
     type Error = DummyError;
     type TextureId = DummyTexture;
 
-    fn id(&self) -> usize {
-        0
+    fn context_id(&self) -> ContextId<DummyTexture> {
+        CONTEXT_ID.clone()
     }
 
     fn clear(&mut self, _color: Color32F, _damage: &[Rectangle<i32, Physical>]) -> Result<(), Self::Error> {
@@ -250,12 +269,12 @@ impl Frame for DummyFrame {
         Transform::Normal
     }
 
-    fn finish(self) -> Result<SyncPoint, Self::Error> {
-        Ok(SyncPoint::default())
-    }
-
     fn wait(&mut self, sync: &SyncPoint) -> Result<(), Self::Error> {
         sync.wait().map_err(|_| DummyError::SyncInterrupted)
+    }
+
+    fn finish(self) -> Result<SyncPoint, Self::Error> {
+        Ok(SyncPoint::default())
     }
 }
 

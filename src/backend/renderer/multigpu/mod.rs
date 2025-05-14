@@ -48,8 +48,8 @@ use std::{
 };
 
 use super::{
-    sync::SyncPoint, Bind, Blit, BlitFrame, Color32F, DebugFlags, ExportMem, Frame, ImportDma, ImportMem,
-    Offscreen, Renderer, RendererSuper, Texture, TextureFilter, TextureMapping,
+    sync::SyncPoint, Bind, Blit, BlitFrame, Color32F, ContextId, DebugFlags, ExportMem, Frame, ImportDma,
+    ImportMem, Offscreen, Renderer, RendererSuper, Texture, TextureFilter, TextureMapping,
 };
 #[cfg(feature = "wayland_frontend")]
 use super::{ImportDmaWl, ImportMemWl};
@@ -272,6 +272,7 @@ impl<A: GraphicsApi> GpuManager<A> {
             .devices
             .iter_mut()
             .partition::<Vec<_>, _>(|dev| dev.node() == device);
+
         Ok(MultiRenderer {
             render: render.remove(0),
             target: None,
@@ -452,7 +453,7 @@ impl<A: GraphicsApi> GpuManager<A> {
     ///
     /// - `target` referrs to the gpu node, that the buffer needs to be accessable on later.
     ///    *Note*: Usually this will be **render**ing gpu of a [`MultiRenderer`]
-    /// - `surface` is the wayland surface, whos buffer and subsurfaces buffers shall be imported
+    /// - `surface` is the wayland surface, whose buffer and subsurfaces buffers shall be imported
     ///
     /// Note: This will do nothing, if you are not using
     /// [`crate::backend::renderer::utils::on_commit_buffer_handler`]
@@ -491,7 +492,7 @@ impl<A: GraphicsApi> GpuManager<A> {
                             // If we need more on rendering - which we cannot know at this point - we will call import_missing later
                             // to receive the rest.
                             // FIXME: We should be able to get rid of this allocation here
-                            let buffer_damage = data.damage().take(1).flatten().cloned().fold(
+                            let buffer_damage = data.damage().raw().take(1).flatten().cloned().fold(
                                 Vec::<Rectangle<i32, BufferCoords>>::new(),
                                 |damage, mut rect| {
                                     // replace with drain_filter, when that becomes stable to reuse the original Vec's memory
@@ -775,12 +776,42 @@ where
     }
 }
 
+impl<R: GraphicsApi, T: GraphicsApi> Texture for MultiFramebuffer<'_, R, T> {
+    fn size(&self) -> Size<i32, BufferCoords> {
+        match &self.0 {
+            MultiFramebufferInternal::Render(framebuffer) => framebuffer.size(),
+            MultiFramebufferInternal::Target(framebuffer) => framebuffer.size(),
+        }
+    }
+
+    fn width(&self) -> u32 {
+        match &self.0 {
+            MultiFramebufferInternal::Render(framebuffer) => framebuffer.width(),
+            MultiFramebufferInternal::Target(framebuffer) => framebuffer.width(),
+        }
+    }
+
+    fn height(&self) -> u32 {
+        match &self.0 {
+            MultiFramebufferInternal::Render(framebuffer) => framebuffer.height(),
+            MultiFramebufferInternal::Target(framebuffer) => framebuffer.height(),
+        }
+    }
+
+    fn format(&self) -> Option<Fourcc> {
+        match &self.0 {
+            MultiFramebufferInternal::Render(framebuffer) => framebuffer.format(),
+            MultiFramebufferInternal::Target(framebuffer) => framebuffer.format(),
+        }
+    }
+}
+
 /// [`Frame`] implementation of a [`MultiRenderer`].
 ///
 /// Leaking the frame will potentially keep it from doing necessary copies
 /// of the internal framebuffer for some multi-gpu configurations. The result would
 /// be no updated framebuffer contents.
-/// Additionally all problems related to the Frame-implementation of the underlying
+/// Additionally, all problems related to the Frame-implementation of the underlying
 /// [`GraphicsApi`] will be present.
 pub struct MultiFrame<'render, 'target, 'frame, 'buffer, R: GraphicsApi, T: GraphicsApi>
 where
@@ -794,6 +825,7 @@ where
     <<T::Device as ApiDevice>::Renderer as RendererSuper>::Error: 'static,
 {
     node: DrmNode,
+
     frame: Option<<<R::Device as ApiDevice>::Renderer as RendererSuper>::Frame<'frame, 'buffer>>,
     framebuffer:
         Option<AliasableBox<<<R::Device as ApiDevice>::Renderer as RendererSuper>::Framebuffer<'frame>>>,
@@ -1000,7 +1032,7 @@ where
     }
 }
 
-static MAX_CPU_COPIES: usize = 3; // TODO, benchmark this
+const MAX_CPU_COPIES: usize = 3; // TODO, benchmark this
 
 impl<'render, 'target, R: GraphicsApi, T: GraphicsApi> RendererSuper for MultiRenderer<'render, 'target, R, T>
 where
@@ -1034,8 +1066,8 @@ where
     <<R::Device as ApiDevice>::Renderer as RendererSuper>::Error: 'static,
     <<T::Device as ApiDevice>::Renderer as RendererSuper>::Error: 'static,
 {
-    fn id(&self) -> usize {
-        self.render.renderer().id()
+    fn context_id(&self) -> ContextId<MultiTexture> {
+        self.render.renderer().context_id().map()
     }
 
     fn downscale_filter(&mut self, filter: TextureFilter) -> Result<(), Self::Error> {
@@ -1780,11 +1812,11 @@ where
     <<R::Device as ApiDevice>::Renderer as RendererSuper>::Error: 'static,
     <<T::Device as ApiDevice>::Renderer as RendererSuper>::Error: 'static,
 {
-    type TextureId = MultiTexture;
     type Error = Error<R, T>;
+    type TextureId = MultiTexture;
 
-    fn id(&self) -> usize {
-        self.frame.as_ref().unwrap().id()
+    fn context_id(&self) -> ContextId<MultiTexture> {
+        self.frame.as_ref().unwrap().context_id().map()
     }
 
     #[instrument(level = "trace", parent = &self.span, skip(self))]
@@ -1862,13 +1894,13 @@ where
     }
 
     #[profiling::function]
-    fn finish(mut self) -> Result<sync::SyncPoint, Self::Error> {
-        self.finish_internal()
+    fn wait(&mut self, sync: &sync::SyncPoint) -> Result<(), Self::Error> {
+        self.frame.as_mut().unwrap().wait(sync).map_err(Error::Render)
     }
 
     #[profiling::function]
-    fn wait(&mut self, sync: &sync::SyncPoint) -> Result<(), Self::Error> {
-        self.frame.as_mut().unwrap().wait(sync).map_err(Error::Render)
+    fn finish(mut self) -> Result<sync::SyncPoint, Self::Error> {
+        self.finish_internal()
     }
 }
 

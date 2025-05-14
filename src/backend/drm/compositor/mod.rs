@@ -58,7 +58,11 @@
 //! # use std::{collections::HashSet, mem::MaybeUninit};
 //! #
 //! use smithay::{
-//!     backend::drm::{compositor::{DrmCompositor, FrameFlags}, DrmSurface},
+//!     backend::drm::{
+//!         compositor::{DrmCompositor, FrameFlags},
+//!         exporter::gbm::GbmFramebufferExporter,
+//!         DrmSurface,
+//!     },
 //!     output::{Output, PhysicalProperties, Subpixel},
 //!     utils::Size,
 //! };
@@ -80,7 +84,7 @@
 //! # let device: DrmDevice = todo!();
 //! # let surface: DrmSurface = todo!();
 //! # let allocator: GbmAllocator<DrmDeviceFd> = todo!();
-//! # let exporter: GbmDevice<DrmDeviceFd> = todo!();
+//! # let exporter: GbmFramebufferExporter<DrmDeviceFd> = todo!();
 //! # let color_formats = [DrmFourcc::Argb8888];
 //! # let renderer_formats = HashSet::from([DrmFormat {
 //! #     code: DrmFourcc::Argb8888,
@@ -172,7 +176,7 @@ use crate::{
 
 use super::{
     error::AccessError,
-    exporter::{ExportBuffer, ExportFramebuffer},
+    exporter::{gbm::GbmFramebufferExporter, ExportBuffer, ExportFramebuffer},
     surface::VrrSupport,
     DrmSurface, Framebuffer, PlaneClaim, PlaneInfo, Planes,
 };
@@ -839,7 +843,7 @@ pub(crate) type RenderFrameErrorType<A, F, R> = RenderFrameError<
 #[derive(Debug)]
 struct CursorState<G: AsFd + 'static> {
     allocator: GbmAllocator<G>,
-    framebuffer_exporter: GbmDevice<G>,
+    framebuffer_exporter: GbmFramebufferExporter<G>,
     previous_output_transform: Option<Transform>,
     previous_output_scale: Option<Scale<f64>>,
     #[cfg(feature = "renderer_pixman")]
@@ -1223,9 +1227,10 @@ where
 
                         let cursor_allocator =
                             GbmAllocator::new(gbm.clone(), GbmBufferFlags::CURSOR | GbmBufferFlags::WRITE);
+                        let framebuffer_exporter = GbmFramebufferExporter::new(gbm.clone());
                         CursorState {
                             allocator: cursor_allocator,
-                            framebuffer_exporter: gbm,
+                            framebuffer_exporter,
                             previous_output_scale: None,
                             previous_output_transform: None,
                             #[cfg(feature = "renderer_pixman")]
@@ -1285,10 +1290,10 @@ where
     /// - `output_mode_source` is used to determine the current mode, scale and transform
     /// - `surface` for the compositor to use
     /// - `planes` defines which planes the compositor is allowed to use for direct scan-out.
-    ///           `None` will result in the compositor to use all planes as specified by [`DrmSurface::planes`]
+    ///   `None` will result in the compositor to use all planes as specified by [`DrmSurface::planes`]
     /// - `allocator` used for the primary plane swapchain
     /// - `framebuffer_exporter` is used to create drm framebuffers for the swapchain buffers (and if possible
-    ///                          for element buffers) for scan-out
+    ///   for element buffers) for scan-out
     /// - `code` is the fixed format to initialize the framebuffer with
     /// - `modifiers` is the set of modifiers allowed, when allocating buffers with the specified color format
     /// - `cursor_size` as reported by the drm device, used for creating buffer for the cursor plane
@@ -1404,9 +1409,10 @@ where
 
             let cursor_allocator =
                 GbmAllocator::new(gbm.clone(), GbmBufferFlags::CURSOR | GbmBufferFlags::WRITE);
+            let framebuffer_exporter = GbmFramebufferExporter::new(gbm.clone());
             CursorState {
                 allocator: cursor_allocator,
-                framebuffer_exporter: gbm,
+                framebuffer_exporter,
                 previous_output_scale: None,
                 previous_output_transform: None,
                 #[cfg(feature = "renderer_pixman")]
@@ -3627,13 +3633,12 @@ where
                         // that to influence the test state of our elements.
                         // Adding or removing cursor can influence the other planes, but
                         // is already covered in the active planes check.
-                        let primary_plane_changed = current_plane_snapshot
-                            .primary
-                            .then(|| {
-                                frame_state.plane_properties(self.surface.plane())
-                                    != previous_frame_state.plane_properties(self.surface.plane())
-                            })
-                            .unwrap_or(false);
+                        let primary_plane_changed = if current_plane_snapshot.primary {
+                            frame_state.plane_properties(self.surface.plane())
+                                != previous_frame_state.plane_properties(self.surface.plane())
+                        } else {
+                            false
+                        };
 
                         let overlay_plane_changed =
                             self.planes.overlay.iter().enumerate().any(|(index, plane)| {
@@ -4416,5 +4421,6 @@ fn drm_compositor_is_send() {
         let _ = PhantomData::<T>;
     }
 
-    is_send::<DrmCompositor<GbmAllocator<DrmDeviceFd>, GbmDevice<DrmDeviceFd>, (), DrmDeviceFd>>();
+    is_send::<DrmCompositor<GbmAllocator<DrmDeviceFd>, GbmFramebufferExporter<DrmDeviceFd>, (), DrmDeviceFd>>(
+    );
 }

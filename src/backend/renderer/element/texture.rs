@@ -10,7 +10,7 @@
 //! It is possible to either use a [`pre-existing texture`](TextureBuffer::from_texture) or to create the texture
 //! from [`RGBA memory`](TextureBuffer::from_memory).
 //! The [`TextureBuffer`] can be used in the smithay pipeline by using [`TextureRenderElement::from_texture_buffer`].
-//!  
+//!
 //! ## Hardware accelerated rendering
 //!
 //! [`TextureRenderBuffer`] provides a solution for hardware accelerated rending with
@@ -62,7 +62,7 @@
 //! const HEIGHT: i32 = 10;
 //!
 //! let memory = vec![0; (WIDTH * 4 * HEIGHT) as usize];
-//! # let mut renderer = DummyRenderer;
+//! # let mut renderer = DummyRenderer::default();
 //! # let mut framebuffer = DummyFramebuffer;
 //!
 //! // Create the texture buffer from a chunk of memory
@@ -120,7 +120,7 @@
 //! const HEIGHT: i32 = 10;
 //!
 //! let memory = vec![0; (WIDTH * 4 * HEIGHT) as usize];
-//! # let mut renderer = DummyRenderer;
+//! # let mut renderer = DummyRenderer::default();
 //! # let mut framebuffer = DummyFramebuffer;
 //!
 //! // Create the texture buffer from a chunk of memory
@@ -203,7 +203,7 @@ use crate::{
         allocator::Fourcc,
         renderer::{
             utils::{DamageBag, DamageSet, DamageSnapshot, OpaqueRegions},
-            Frame, ImportMem, Renderer, Texture,
+            ContextId, Frame, ImportMem, Renderer, Texture,
         },
     },
     utils::{Buffer, Coordinate, Logical, Physical, Point, Rectangle, Scale, Size, Transform},
@@ -213,18 +213,18 @@ use super::{CommitCounter, Element, Id, Kind, RenderElement};
 
 /// A single texture buffer
 #[derive(Debug, Clone)]
-pub struct TextureBuffer<T> {
+pub struct TextureBuffer<T: Texture> {
     id: Id,
-    renderer_id: usize,
+    context_id: ContextId<T>,
     texture: T,
     scale: i32,
     transform: Transform,
     opaque_regions: Option<Vec<Rectangle<i32, Buffer>>>,
 }
 
-impl<T> TextureBuffer<T> {
+impl<T: Texture> TextureBuffer<T> {
     /// Create a [`TextureBuffer`] from an existing texture
-    pub fn from_texture<R: Renderer>(
+    pub fn from_texture<R: Renderer<TextureId = T>>(
         renderer: &R,
         texture: T,
         scale: i32,
@@ -233,7 +233,7 @@ impl<T> TextureBuffer<T> {
     ) -> Self {
         TextureBuffer {
             id: Id::new(),
-            renderer_id: renderer.id(),
+            context_id: renderer.context_id(),
             texture,
             scale,
             transform,
@@ -274,9 +274,9 @@ impl<T> TextureBuffer<T> {
 
 /// A texture backed render buffer
 #[derive(Debug, Clone)]
-pub struct TextureRenderBuffer<T> {
+pub struct TextureRenderBuffer<T: Texture> {
     id: Id,
-    renderer_id: usize,
+    context_id: ContextId<T>,
     texture: T,
     scale: i32,
     transform: Transform,
@@ -286,7 +286,7 @@ pub struct TextureRenderBuffer<T> {
 
 impl<T: Texture> TextureRenderBuffer<T> {
     /// Create [`TextureRenderBuffer`] from an existing texture
-    pub fn from_texture<R: Renderer>(
+    pub fn from_texture<R: Renderer<TextureId = T>>(
         renderer: &R,
         texture: T,
         scale: i32,
@@ -295,7 +295,7 @@ impl<T: Texture> TextureRenderBuffer<T> {
     ) -> Self {
         TextureRenderBuffer {
             id: Id::new(),
-            renderer_id: renderer.id(),
+            context_id: renderer.context_id(),
             texture,
             scale,
             transform,
@@ -327,7 +327,7 @@ impl<T: Texture> TextureRenderBuffer<T> {
     }
 
     /// Replace the stored texture
-    pub fn update_from_texture<R: Renderer>(
+    pub fn update_from_texture<R: Renderer<TextureId = T>>(
         &mut self,
         renderer: &R,
         texture: T,
@@ -335,7 +335,7 @@ impl<T: Texture> TextureRenderBuffer<T> {
         transform: Transform,
         opaque_regions: Option<Vec<Rectangle<i32, Buffer>>>,
     ) {
-        assert_eq!(self.renderer_id, renderer.id());
+        assert_eq!(self.context_id, renderer.context_id());
         self.texture = texture;
         self.scale = scale;
         self.transform = transform;
@@ -351,7 +351,7 @@ impl<T: Texture> TextureRenderBuffer<T> {
         region: Rectangle<i32, Buffer>,
         opaque_regions: Option<Vec<Rectangle<i32, Buffer>>>,
     ) -> Result<(), R::Error> {
-        assert_eq!(self.renderer_id, renderer.id());
+        assert_eq!(self.context_id, renderer.context_id());
         renderer.update_memory(&self.texture, data, region)?;
         self.damage_tracker.lock().unwrap().add([region]);
         self.opaque_regions = opaque_regions;
@@ -375,13 +375,13 @@ impl<T: Texture> TextureRenderBuffer<T> {
 
 /// A render context for [`TextureRenderBuffer`]
 #[derive(Debug)]
-pub struct RenderContext<'a, T> {
+pub struct RenderContext<'a, T: Texture> {
     buffer: &'a mut TextureRenderBuffer<T>,
     damage: Vec<Rectangle<i32, Buffer>>,
     opaque_regions: Option<Option<Vec<Rectangle<i32, Buffer>>>>,
 }
 
-impl<T> RenderContext<'_, T> {
+impl<T: Texture> RenderContext<'_, T> {
     /// Draw to the buffer
     pub fn draw<F, E>(&mut self, f: F) -> Result<(), E>
     where
@@ -398,7 +398,7 @@ impl<T> RenderContext<'_, T> {
     }
 }
 
-impl<T> Drop for RenderContext<'_, T> {
+impl<T: Texture> Drop for RenderContext<'_, T> {
     fn drop(&mut self) {
         self.buffer
             .damage_tracker
@@ -413,10 +413,10 @@ impl<T> Drop for RenderContext<'_, T> {
 
 /// A render element for a [`TextureRenderBuffer`]
 #[derive(Debug)]
-pub struct TextureRenderElement<T> {
+pub struct TextureRenderElement<T: Texture> {
     location: Point<f64, Physical>,
     id: Id,
-    renderer_id: usize,
+    context_id: ContextId<T>,
     pub(crate) texture: T,
     scale: i32,
     transform: Transform,
@@ -448,7 +448,7 @@ impl<T: Texture + Clone> TextureRenderElement<T> {
     ) -> Self {
         TextureRenderElement::from_texture_with_damage(
             buffer.id.clone(),
-            buffer.renderer_id,
+            buffer.context_id.clone(),
             location,
             buffer.texture.clone(),
             buffer.scale,
@@ -473,7 +473,7 @@ impl<T: Texture + Clone> TextureRenderElement<T> {
     ) -> Self {
         TextureRenderElement::from_static_texture(
             buffer.id.clone(),
-            buffer.renderer_id,
+            buffer.context_id.clone(),
             location,
             buffer.texture.clone(),
             buffer.scale,
@@ -493,7 +493,7 @@ impl<T: Texture> TextureRenderElement<T> {
     #[allow(clippy::too_many_arguments)]
     pub fn from_texture_with_damage(
         id: Id,
-        renderer_id: usize,
+        context_id: ContextId<T>,
         location: impl Into<Point<f64, Physical>>,
         texture: T,
         scale: i32,
@@ -514,7 +514,7 @@ impl<T: Texture> TextureRenderElement<T> {
         TextureRenderElement {
             location: location.into(),
             id,
-            renderer_id,
+            context_id,
             texture,
             scale,
             transform,
@@ -532,7 +532,7 @@ impl<T: Texture> TextureRenderElement<T> {
     #[allow(clippy::too_many_arguments)]
     pub fn from_static_texture(
         id: Id,
-        renderer_id: usize,
+        context_id: ContextId<T>,
         location: impl Into<Point<f64, Physical>>,
         texture: T,
         scale: i32,
@@ -545,7 +545,7 @@ impl<T: Texture> TextureRenderElement<T> {
     ) -> Self {
         TextureRenderElement::from_texture_with_damage(
             id,
-            renderer_id,
+            context_id,
             location,
             texture,
             scale,
@@ -694,8 +694,8 @@ where
         damage: &[Rectangle<i32, Physical>],
         opaque_regions: &[Rectangle<i32, Physical>],
     ) -> Result<(), R::Error> {
-        if frame.id() != self.renderer_id {
-            warn!("trying to render texture from different renderer");
+        if frame.context_id() != self.context_id {
+            warn!("trying to render texture from different renderer context");
             return Ok(());
         }
 

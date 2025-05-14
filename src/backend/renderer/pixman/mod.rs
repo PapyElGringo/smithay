@@ -33,8 +33,8 @@ use wayland_server::protocol::wl_buffer;
 ))]
 use super::ImportEgl;
 use super::{
-    sync::SyncPoint, Bind, Color32F, DebugFlags, ExportMem, Frame, ImportDma, ImportMem, Offscreen, Renderer,
-    RendererSuper, Texture, TextureFilter, TextureMapping,
+    sync::SyncPoint, Bind, Color32F, ContextId, DebugFlags, ExportMem, Frame, ImportDma, ImportMem,
+    Offscreen, Renderer, RendererSuper, Texture, TextureFilter, TextureMapping,
 };
 
 mod error;
@@ -69,6 +69,36 @@ pub struct PixmanTarget<'a>(PixmanTargetInternal<'a>);
 enum PixmanTargetInternal<'a> {
     Dmabuf { dmabuf: &'a Dmabuf, image: PixmanImage },
     Image(&'a mut pixman::Image<'static, 'static>),
+}
+
+impl Texture for PixmanTarget<'_> {
+    fn width(&self) -> u32 {
+        match &self.0 {
+            PixmanTargetInternal::Dmabuf { dmabuf, .. } => dmabuf.width(),
+            PixmanTargetInternal::Image(image) => image.width() as u32,
+        }
+    }
+
+    fn height(&self) -> u32 {
+        match &self.0 {
+            PixmanTargetInternal::Dmabuf { dmabuf, .. } => dmabuf.height(),
+            PixmanTargetInternal::Image(image) => image.height() as u32,
+        }
+    }
+
+    fn format(&self) -> Option<DrmFourcc> {
+        match &self.0 {
+            PixmanTargetInternal::Dmabuf { dmabuf, .. } => Some(dmabuf.format().code),
+            PixmanTargetInternal::Image(image) => DrmFourcc::try_from(image.format()).ok(),
+        }
+    }
+
+    fn size(&self) -> Size<i32, BufferCoords> {
+        match &self.0 {
+            PixmanTargetInternal::Dmabuf { dmabuf, .. } => dmabuf.size(),
+            PixmanTargetInternal::Image(image) => Size::from((image.width() as i32, image.height() as i32)),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -224,6 +254,11 @@ impl Texture for PixmanTexture {
         self.0 .0.image.lock().unwrap().height() as u32
     }
 
+    fn size(&self) -> Size<i32, BufferCoords> {
+        let lock = self.0 .0.image.lock().unwrap();
+        Size::from((lock.width() as i32, lock.height() as i32))
+    }
+
     fn format(&self) -> Option<DrmFourcc> {
         DrmFourcc::try_from(self.0 .0.image.lock().unwrap().format()).ok()
     }
@@ -321,8 +356,8 @@ impl Frame for PixmanFrame<'_, '_> {
 
     type TextureId = PixmanTexture;
 
-    fn id(&self) -> usize {
-        0
+    fn context_id(&self) -> ContextId<PixmanTexture> {
+        self.renderer.context_id()
     }
 
     #[profiling::function]
@@ -609,13 +644,13 @@ impl Frame for PixmanFrame<'_, '_> {
         self.transform
     }
 
+    fn wait(&mut self, sync: &SyncPoint) -> Result<(), Self::Error> {
+        sync.wait().map_err(|_| PixmanError::SyncInterrupted)
+    }
+
     #[profiling::function]
     fn finish(mut self) -> Result<SyncPoint, Self::Error> {
         self.finish_internal()
-    }
-
-    fn wait(&mut self, sync: &SyncPoint) -> Result<(), Self::Error> {
-        sync.wait().map_err(|_| PixmanError::SyncInterrupted)
     }
 }
 
@@ -783,8 +818,12 @@ impl RendererSuper for PixmanRenderer {
 }
 
 impl Renderer for PixmanRenderer {
-    fn id(&self) -> usize {
-        0
+    fn context_id(&self) -> ContextId<PixmanTexture> {
+        // Pixman textures are just memory slices, and there's nothing in the API
+        // that prevents sharing them between different `PixmanRenderer` instances.
+        // So they all share the same static `ContextId`.
+        static CONTEXT_ID: LazyLock<ContextId<PixmanTexture>> = LazyLock::new(ContextId::new);
+        CONTEXT_ID.clone()
     }
 
     fn downscale_filter(&mut self, filter: TextureFilter) -> Result<(), Self::Error> {

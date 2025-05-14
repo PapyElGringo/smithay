@@ -73,13 +73,14 @@
 mod handlers;
 pub(crate) mod xdg;
 
-use std::sync::{
-    atomic::{AtomicU32, Ordering},
-    Arc,
+use std::sync::{atomic::Ordering, Arc};
+
+use crate::{
+    output::{Inner, Mode, Output, Scale, Subpixel, WeakOutput},
+    utils::iter::new_locked_obj_iter,
 };
 
-use crate::output::{Inner, Mode, Output, Scale, Subpixel, WeakOutput};
-
+use atomic_float::AtomicF64;
 use tracing::info;
 use wayland_protocols::xdg::xdg_output::zv1::server::zxdg_output_manager_v1::ZxdgOutputManagerV1;
 use wayland_server::{
@@ -145,15 +146,15 @@ impl OutputManagerState {
 #[derive(Debug)]
 pub struct OutputUserData {
     pub(crate) output: WeakOutput,
-    last_client_scale: AtomicU32,
-    client_scale: Arc<AtomicU32>,
+    last_client_scale: AtomicF64,
+    client_scale: Arc<AtomicF64>,
 }
 
 impl Clone for OutputUserData {
     fn clone(&self) -> Self {
         OutputUserData {
             output: self.output.clone(),
-            last_client_scale: AtomicU32::new(self.last_client_scale.load(Ordering::Acquire)),
+            last_client_scale: AtomicF64::new(self.last_client_scale.load(Ordering::Acquire)),
             client_scale: self.client_scale.clone(),
         }
     }
@@ -247,7 +248,7 @@ impl Output {
                 inner.send_geometry_to(&output);
             }
             if (new_scale.is_some() || scale_changed) && output.version() >= 2 {
-                let scale = (inner.scale.integer_scale() / client_scale as i32).max(1);
+                let scale = (inner.scale.integer_scale() as f64 / client_scale).max(1.).ceil() as i32;
                 output.scale(scale);
             }
             if output.version() >= 2 {
@@ -268,24 +269,14 @@ impl Output {
     }
 
     /// This function returns all managed [WlOutput] matching the provided [Client]
-    pub fn client_outputs(&self, client: &Client) -> Vec<WlOutput> {
+    pub fn client_outputs<'a>(&'a self, client: &Client) -> impl Iterator<Item = WlOutput> + 'a {
         self.client_outputs_internal(client.id())
     }
 
-    fn client_outputs_internal(&self, client: ClientId) -> Vec<WlOutput> {
-        let data = self.inner.0.lock().unwrap();
-        data.instances
-            .iter()
-            .filter_map(|output| output.upgrade().ok())
-            .filter(|output| {
-                data.handle
-                    .as_ref()
-                    .and_then(|handle| handle.upgrade())
-                    .and_then(|handle| handle.get_client(output.id()).ok())
-                    .map(|output_client| output_client == client)
-                    .unwrap_or(false)
-            })
-            .collect()
+    fn client_outputs_internal(&self, client: ClientId) -> impl Iterator<Item = WlOutput> + '_ {
+        let guard = self.inner.0.lock().unwrap();
+
+        new_locked_obj_iter(guard, client, |inner| inner.instances.iter())
     }
 
     /// Sends `wl_surface.enter` for the provided surface

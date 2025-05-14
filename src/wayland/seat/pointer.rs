@@ -1,8 +1,6 @@
-use std::sync::{
-    atomic::{AtomicU32, Ordering},
-    Arc, Mutex,
-};
+use std::sync::{atomic::Ordering, Arc, Mutex};
 
+use atomic_float::AtomicF64;
 use wayland_server::{
     backend::{ClientId, ObjectId},
     protocol::{
@@ -12,7 +10,7 @@ use wayland_server::{
         },
         wl_surface::WlSurface,
     },
-    Dispatch, DisplayHandle, Resource, Weak,
+    Client, Dispatch, DisplayHandle, Resource, Weak,
 };
 
 use crate::{
@@ -26,7 +24,7 @@ use crate::{
         },
         Seat,
     },
-    utils::{Client, Point, Serial},
+    utils::{iter::new_locked_obj_iter_from_vec, Client as ClientCoords, Point, Serial},
     wayland::{compositor, pointer_constraints::with_pointer_constraint},
 };
 
@@ -50,6 +48,12 @@ impl<D: SeatHandler + 'static> PointerHandle<D> {
     pub fn from_resource(seat: &WlPointer) -> Option<Self> {
         seat.data::<PointerUserData<D>>()?.handle.clone()
     }
+
+    /// Return all raw [`WlPointer`] instances for a particular [`Client`]
+    pub fn client_pointers<'a>(&'a self, client: &Client) -> impl Iterator<Item = WlPointer> + 'a {
+        let guard = self.wl_pointer.known_pointers.lock().unwrap();
+        new_locked_obj_iter_from_vec(guard, client.id())
+    }
 }
 
 #[derive(Debug, Default)]
@@ -72,7 +76,7 @@ impl WlPointerHandle {
                 .unwrap()
                 .client_scale
                 .load(Ordering::Acquire);
-            let location = event.location.to_client(client_scale as f64);
+            let location = event.location.to_client(client_scale);
             ptr.enter(event.serial.into(), surface, location.x, location.y);
         })
     }
@@ -95,7 +99,7 @@ impl WlPointerHandle {
                 .unwrap()
                 .client_scale
                 .load(Ordering::Acquire);
-            let location = event.location.to_client(client_scale as f64);
+            let location = event.location.to_client(client_scale);
             ptr.motion(event.time, location.x, location.y);
         })
     }
@@ -191,7 +195,7 @@ impl WlPointerHandle {
                 ptr.axis(
                     details.time,
                     WlAxis::HorizontalScroll,
-                    details.axis.0 * client_scale as f64,
+                    details.axis.0 * client_scale,
                 );
             }
             if details.axis.1 != 0.0 {
@@ -201,7 +205,7 @@ impl WlPointerHandle {
                 ptr.axis(
                     details.time,
                     WlAxis::VerticalScroll,
-                    details.axis.1 * client_scale as f64,
+                    details.axis.1 * client_scale,
                 );
             }
         })
@@ -341,7 +345,7 @@ where
 #[derive(Debug)]
 pub struct PointerUserData<D: SeatHandler> {
     pub(crate) handle: Option<PointerHandle<D>>,
-    pub(crate) client_scale: Arc<AtomicU32>,
+    pub(crate) client_scale: Arc<AtomicF64>,
 }
 
 impl<D> Dispatch<WlPointer, PointerUserData<D>, D> for SeatState<D>
@@ -397,8 +401,10 @@ where
                                 .unwrap()
                                 .client_scale
                                 .load(Ordering::Acquire);
-                            let hotspot = Point::<i32, Client>::from((hotspot_x, hotspot_y))
-                                .to_logical(client_scale as i32);
+                            let hotspot = Point::<i32, ClientCoords>::from((hotspot_x, hotspot_y))
+                                .to_f64()
+                                .to_logical(client_scale)
+                                .to_i32_round();
                             states
                                 .data_map
                                 .get::<Mutex<CursorImageAttributes>>()

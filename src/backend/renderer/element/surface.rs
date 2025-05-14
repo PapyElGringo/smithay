@@ -46,7 +46,7 @@
 //!
 //! // Initialize a static damage tracked renderer
 //! let mut damage_tracker = OutputDamageTracker::new((800, 600), 1.0, Transform::Normal);
-//! # let mut renderer = DummyRenderer;
+//! # let mut renderer = DummyRenderer::default();
 //! # let mut framebuffer = DummyFramebuffer;
 //!
 //! loop {
@@ -237,7 +237,7 @@ impl<R: Renderer + ImportAll> WaylandSurfaceRenderElement<R> {
         let texture = if let Ok(spb) = crate::wayland::single_pixel_buffer::get_single_pixel_buffer(&buffer) {
             WaylandSurfaceTexture::SolidColor(Color32F::from(spb.rgba32f()))
         } else {
-            WaylandSurfaceTexture::Texture(data.texture::<R>(renderer.id())?.clone())
+            WaylandSurfaceTexture::Texture(data.texture(renderer.context_id())?.clone())
         };
 
         Some(Self {
